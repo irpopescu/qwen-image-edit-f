@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y git ffmpeg libsm6 libxext6 && rm -rf /v
 RUN pip install --no-cache-dir \
     torch==2.1.0 torchvision torchaudio transformers==4.45.2 accelerate==0.33.0 \
     safetensors pillow runpod tqdm modelscope==1.19.0 \
-    addict requests yapf numpy gradio datasets evaluate opencv-python oss2 aiohttp
+    addict requests yapf numpy gradio datasets==2.14.6 evaluate opencv-python oss2 aiohttp
 
 ENV HF_HOME=/workspace/hf_cache
 WORKDIR /workspace
