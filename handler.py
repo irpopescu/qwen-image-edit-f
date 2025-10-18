@@ -1,46 +1,39 @@
-import base64
-import io
-import torch
+import base64, io, torch, runpod
 from PIL import Image
-from diffusers import DiffusionPipeline
-import runpod
+from diffusers import QwenImageEditPipeline
 
-# === Încarcă modelul Qwen Image Edit ===
-print("🚀 Loading Qwen Image Edit model...")
-pipe = DiffusionPipeline.from_pretrained(
-    "Qwen/Qwen-Image-Edit",     # <-- modelul corect
+print("🚀 Loading Qwen-Image-Edit model...")
+pipe = QwenImageEditPipeline.from_pretrained(
+    "Qwen/Qwen-Image-Edit",
     torch_dtype=torch.float16
 ).to("cuda")
-print("✅ Model Qwen-Image-Edit ready!")
+print("✅ Model ready!")
 
-# === Funcția principală ===
-def generate_image(job):
-    """Primește prompt și imagine base64, returnează imagine editată."""
+def handler(job):
     try:
         inputs = job["input"]
         prompt = inputs.get("prompt", "photo of an object on white background")
         image_b64 = inputs.get("image_b64")
-
         if not image_b64:
             return {"error": "Missing image_b64 input"}
 
-        # Decodăm imaginea inițială
-        image_bytes = base64.b64decode(image_b64)
-        init_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        print("📥 Decoding input image...")
+        image = Image.open(io.BytesIO(base64.b64decode(image_b64))).convert("RGB")
 
-        # Apelăm pipeline-ul Qwen Image Edit
-        result = pipe(prompt=prompt, image=init_image, strength=0.25, guidance_scale=4.5)
-        edited_image = result.images[0]
+        print("🎨 Generating new image...")
+        result = pipe(prompt=prompt, image=image)
+        out_img = result.images[0]
 
-        # Codăm rezultatul în base64
-        output_buffer = io.BytesIO()
-        edited_image.save(output_buffer, format="PNG")
-        output_b64 = base64.b64encode(output_buffer.getvalue()).decode("utf-8")
+        print("📤 Encoding result...")
+        buf = io.BytesIO()
+        out_img.save(buf, format="PNG")
+        output_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
+        print("✅ Done.")
         return {"image_b64": output_b64}
 
     except Exception as e:
+        print("❌ ERROR:", e)
         return {"error": str(e)}
 
-# === Pornim endpointul RunPod ===
-runpod.serverless.start({"handler": generate_image})
+runpod.serverless.start({"handler": handler})
