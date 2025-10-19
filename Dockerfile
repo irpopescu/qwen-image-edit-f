@@ -10,7 +10,12 @@ RUN pip install --no-cache-dir \
     safetensors pillow runpod tqdm modelscope==1.19.0 \
     addict requests yapf numpy gradio datasets==2.20.0 evaluate opencv-python oss2 aiohttp pyarrow==16.0.0
 
+# === Cache pentru modele mari ===
+ENV MODELSCOPE_CACHE=/workspace/modelscope_cache
 ENV HF_HOME=/workspace/hf_cache
+ENV TRANSFORMERS_CACHE=/workspace/hf_cache
+ENV TORCH_HOME=/workspace/torch_cache
+RUN mkdir -p /workspace/modelscope_cache /workspace/hf_cache /workspace/torch_cache
 WORKDIR /workspace
 COPY handler.py .
 
