@@ -14,11 +14,12 @@ pipe = None  # modelul va fi inițializat o singură dată
 def init_model():
     global pipe
     if pipe is None:
-        print("🚀 Loading Qwen Image Edit pipeline from ModelScope...")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"🚀 Loading Qwen Image Edit pipeline on device: {device}")
         pipe = pipeline(
             Tasks.image_editing,
-            model='Qwen/Qwen-Image-Edit',
-            device='cuda'
+            model="Qwen/Qwen-Image-Edit",
+            device=device
         )
         print("✅ Modelul Qwen-Image-Edit e gata de lucru!")
     return pipe
@@ -33,20 +34,19 @@ def handler(job):
         if not image_b64:
             return {"error": "Missing image_b64"}
 
-        # salvează imaginea primită
         img = Image.open(io.BytesIO(base64.b64decode(image_b64))).convert("RGB")
         img.save("/workspace/input.png")
 
         print(f"🎨 Prompt: {prompt}")
         output = model(dict(prompt=prompt, image="/workspace/input.png"))
-
-        # citește rezultatul returnat de modelscope
         out_path = output["output_img"]
+
         with open(out_path, "rb") as f:
             result_b64 = base64.b64encode(f.read()).decode("utf-8")
 
         print("✅ Editare finalizată cu succes!")
         return {"image_b64": result_b64}
+
     except Exception as e:
         print(f"❌ Error: {e}")
         return {"error": str(e)}
