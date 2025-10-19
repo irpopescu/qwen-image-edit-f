@@ -3,21 +3,30 @@ from PIL import Image
 from modelscope.pipelines import pipeline
 from modelscope.utils.constant import Tasks
 
+# === Cache local persistent ===
 os.environ["HF_HOME"] = "/workspace/hf_cache"
+os.environ["MODELSCOPE_CACHE"] = "/workspace/modelscope_cache"
 os.makedirs("/workspace/hf_cache", exist_ok=True)
+os.makedirs("/workspace/modelscope_cache", exist_ok=True)
 
-print("🚀 Loading Qwen Image Edit pipeline from ModelScope...")
+pipe = None  # modelul va fi inițializat o singură dată
 
-pipe = pipeline(
-    Tasks.image_editing,
-    model='Qwen/Qwen-Image-Edit',
-    device='cuda'
-)
+def init_model():
+    global pipe
+    if pipe is None:
+        print("🚀 Loading Qwen Image Edit pipeline from ModelScope...")
+        pipe = pipeline(
+            Tasks.image_editing,
+            model='Qwen/Qwen-Image-Edit',
+            device='cuda'
+        )
+        print("✅ Modelul Qwen-Image-Edit e gata de lucru!")
+    return pipe
 
-print("✅ Modelul Qwen-Image-Edit e gata de lucru!")
 
 def handler(job):
     try:
+        model = init_model()
         data = job.get("input", {})
         prompt = data.get("prompt", "photo of a product on white background")
         image_b64 = data.get("image_b64")
@@ -29,7 +38,7 @@ def handler(job):
         img.save("/workspace/input.png")
 
         print(f"🎨 Prompt: {prompt}")
-        output = pipe(dict(prompt=prompt, image="/workspace/input.png"))
+        output = model(dict(prompt=prompt, image="/workspace/input.png"))
 
         # citește rezultatul returnat de modelscope
         out_path = output["output_img"]
@@ -42,4 +51,5 @@ def handler(job):
         print(f"❌ Error: {e}")
         return {"error": str(e)}
 
+# === RunPod entrypoint ===
 runpod.serverless.start({"handler": handler})
